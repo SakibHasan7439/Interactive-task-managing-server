@@ -3,11 +3,18 @@ const express = require('express');
 const cors = require('cors');
 
 const app = express();
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 3000;
 
 // middleware
 app.use(cors());
 app.use(express.json());
+app.use(cors({
+    origin: [
+        'http://localhost:5173',
+        'https://interactive-task-manager-65940.web.app',
+        'https://interactive-task-manager-65940.firebaseapp.com'
+    ],
+}));
 
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
@@ -25,7 +32,8 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
+
     const usersCollection = client.db('interactive-task-manager').collection('users');
     const tasksCollection = client.db('interactive-task-manager').collection('tasks');
 
@@ -46,8 +54,10 @@ async function run() {
         res.send(result);
     })
 
-    app.get('/task', async(req, res) =>{
-        const result = await tasksCollection.find().toArray();
+    app.get('/task/:email', async(req, res) =>{
+        const email = req.params.email;
+        const query = {userEmail: email}
+        const result = await tasksCollection.find(query).toArray();
         res.send(result);
     })
 
@@ -80,9 +90,20 @@ async function run() {
         res.send(result);
     })
 
+    app.patch('/taskStatus/:id', async(req, res) =>{
+        const { status } = req.body;
+        const id = req.params.id;
+        const filter = {_id:new ObjectId(id)};
+        const updatedDoc = {
+            $set: {status}
+        };
+        const result = await tasksCollection.updateOne(filter, updatedDoc);
+        res.send(result);
+    })
+
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    // await client.db("admin").command({ ping: 1 });
+    // console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
